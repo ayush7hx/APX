@@ -24,9 +24,9 @@ extensions: List[str] = [
 
 class zyrox(commands.AutoShardedBot):
     def __init__(self, *arg, **kwargs):
-        intents = discord.Intents.all()
-        intents.presences = True
+        intents = discord.Intents.default()
         intents.members = True
+        intents.message_content = True
         super().__init__(command_prefix=self.get_prefix,
                          case_insensitive=True,
                          intents=intents,
@@ -62,6 +62,7 @@ class zyrox(commands.AutoShardedBot):
                 print(Fore.GREEN + Style.BRIGHT + f"Loaded extension: {extension}")
             except Exception as e:
                 print(f"{Fore.RED}{Style.BRIGHT}Failed to load extension {extension}. {e}")
+                raise
         print(Fore.GREEN + Style.BRIGHT + "*" * 20)
 
     @tasks.loop(seconds=4)

@@ -1,0 +1,26 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Python and test/build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime databases and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+/db/*.json
+
+# Replit-only setup and unrelated archive
+/.replit
+/replit.nix
+/cogs/moderation/Moderation.tar
+
+# Locally generated screenshots
+/attached_assets/

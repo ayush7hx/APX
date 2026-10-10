@@ -79,9 +79,12 @@ class Automod(commands.Cog):
             result = await cursor.fetchone()
             return result is not None and result[0] == 1
 
-    async def update_punishments(self, guild_id, event, punishment):
+    async def update_punishments(self, guild_id, events, punishment):
         async with aiosqlite.connect("db/automod.db") as db:
-            await db.execute("INSERT OR REPLACE INTO automod_punishments (guild_id, event, punishment) VALUES (?, ?, ?)", (guild_id, event, punishment))
+            await db.executemany(
+                "INSERT OR REPLACE INTO automod_punishments (guild_id, event, punishment) VALUES (?, ?, ?)",
+                ((guild_id, event, punishment) for event in events)
+            )
             await db.commit()
 
     async def get_current_punishments(self, guild_id):
@@ -230,8 +233,13 @@ class Automod(commands.Cog):
 
         async with aiosqlite.connect("db/automod.db") as db:
             await db.execute("INSERT OR REPLACE INTO automod (guild_id, enabled) VALUES (?, 1)", (guild_id,))
-            for event in selected_events:
-                await db.execute("INSERT OR REPLACE INTO automod_punishments (guild_id, event, punishment) VALUES (?, ?, ?)", (guild_id, event, self.default_punishment))
+            await db.executemany(
+                "INSERT OR REPLACE INTO automod_punishments (guild_id, event, punishment) VALUES (?, ?, ?)",
+                (
+                    (guild_id, event, self.default_punishment)
+                    for event in selected_events
+                )
+            )
             await db.commit()
 
         
@@ -365,8 +373,9 @@ class Automod(commands.Cog):
                         return
 
                     
-                    for event in selected_events:
-                        await self.update_punishments(guild_id, event, punishment)
+                    await self.update_punishments(
+                        guild_id, selected_events, punishment
+                    )
 
                     updated_punishments = await self.get_current_punishments(guild_id)
                     updated_embed = discord.Embed(title=f"Updated Automod Punishments for {ctx.guild.name}", color=0xFF0000)

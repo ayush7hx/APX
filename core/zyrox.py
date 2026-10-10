@@ -6,6 +6,7 @@ import json
 import jishaku
 import asyncio
 import typing
+import time
 from typing import List
 import aiosqlite
 from utils.config import OWNER_IDS
@@ -38,6 +39,9 @@ class zyrox(commands.AutoShardedBot):
                          sync_commands_debug=True,
                          sync_commands=True,
                          shard_count=1)
+        self._prefix_cache: dict[int, tuple[float, str]] = {}
+        self._no_prefix_cache: dict[int, tuple[float, bool]] = {}
+
     async def setup_hook(self):
         await self.load_extensions()
 
@@ -65,25 +69,47 @@ class zyrox(commands.AutoShardedBot):
             return msg
 
     async def get_prefix(self, message: discord.Message):
-        if message.guild:
-            guild_id = message.guild.id
-            async with aiosqlite.connect('db/np.db') as db:
-                async with db.execute("SELECT id FROM np WHERE id = ?", (message.author.id,)) as cursor:
-                    row = await cursor.fetchone()
-            data = await getConfig(guild_id)
-            prefix = data["prefix"]
-            if row:
-                return commands.when_mentioned_or(prefix, '')(self, message)
-            else:
-                return commands.when_mentioned_or(prefix)(self, message)
+        now = time.monotonic()
+        author_id = message.author.id
+        no_prefix_entry = self._no_prefix_cache.get(author_id)
+        if no_prefix_entry is not None and no_prefix_entry[0] > now:
+            has_no_prefix = no_prefix_entry[1]
         else:
             async with aiosqlite.connect('db/np.db') as db:
-                async with db.execute("SELECT id FROM np WHERE id = ?", (message.author.id,)) as cursor:
-                    row = await cursor.fetchone()
-            if row:
-                return commands.when_mentioned_or('?', '')(self, message)
+                async with db.execute(
+                    "SELECT 1 FROM np WHERE id = ?",
+                    (author_id,)
+                ) as cursor:
+                    has_no_prefix = await cursor.fetchone() is not None
+            if len(self._no_prefix_cache) >= 4096:
+                self._no_prefix_cache = {
+                    key: entry for key, entry in self._no_prefix_cache.items()
+                    if entry[0] > now
+                }
+            self._no_prefix_cache[author_id] = (now + 5, has_no_prefix)
+
+        if message.guild:
+            guild_id = message.guild.id
+            prefix_entry = self._prefix_cache.get(guild_id)
+            if prefix_entry is not None and prefix_entry[0] > now:
+                prefix = prefix_entry[1]
             else:
-                return commands.when_mentioned_or('')(self, message)
+                data = await getConfig(guild_id)
+                prefix = data["prefix"]
+                if len(self._prefix_cache) >= 4096:
+                    self._prefix_cache = {
+                        key: entry for key, entry in self._prefix_cache.items()
+                        if entry[0] > now
+                    }
+                self._prefix_cache[guild_id] = (now + 5, prefix)
+
+            if has_no_prefix:
+                return commands.when_mentioned_or(prefix, '')(self, message)
+            return commands.when_mentioned_or(prefix)(self, message)
+        else:
+            if has_no_prefix:
+                return commands.when_mentioned_or('?', '')(self, message)
+            return commands.when_mentioned_or('')(self, message)
 
     async def on_message_edit(self, before, after):
         if not before.content or before.content == after.content:

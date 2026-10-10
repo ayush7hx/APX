@@ -35,11 +35,269 @@ def convert(argument):
   return round(time)
 
 
+class ManageRoleView(View):
+  PAGE_SIZE = 25
+
+  def __init__(self, ctx, member, roles):
+    super().__init__(timeout=120)
+    self.ctx = ctx
+    self.member = member
+    self.roles = roles
+    self.page = 0
+    self.selected_role_id = None
+    self.message = None
+    self._add_role_select()
+
+    self.previous_button = Button(
+      label="Previous", style=discord.ButtonStyle.secondary, row=1,
+      disabled=True
+    )
+    self.previous_button.callback = self.previous_page
+    self.add_item(self.previous_button)
+
+    self.next_button = Button(
+      label="Next", style=discord.ButtonStyle.secondary, row=1,
+      disabled=len(roles) <= self.PAGE_SIZE
+    )
+    self.next_button.callback = self.next_page
+    self.add_item(self.next_button)
+
+    self.add_button = Button(
+      label="Add role", style=discord.ButtonStyle.success, row=1
+    )
+    self.add_button.callback = self.add_role
+    self.add_item(self.add_button)
+
+    self.remove_button = Button(
+      label="Remove role", style=discord.ButtonStyle.danger, row=1
+    )
+    self.remove_button.callback = self.remove_role
+    self.add_item(self.remove_button)
+
+    self.cancel_button = Button(
+      label="Cancel", style=discord.ButtonStyle.secondary, row=1
+    )
+    self.cancel_button.callback = self.cancel
+    self.add_item(self.cancel_button)
+
+  def _page_roles(self):
+    start = self.page * self.PAGE_SIZE
+    return self.roles[start:start + self.PAGE_SIZE]
+
+  def _add_role_select(self):
+    options = [
+      discord.SelectOption(
+        label=role.name[:100],
+        description=f"Position {role.position} · "
+        f"{'Assigned' if role in self.member.roles else 'Not assigned'}",
+        value=str(role.id)
+      )
+      for role in self._page_roles()
+    ]
+    select = discord.ui.Select(
+      placeholder="Choose a role",
+      options=options,
+      min_values=1,
+      max_values=1,
+      row=0
+    )
+    select.callback = self.select_role
+    self.role_select = select
+    self.add_item(select)
+
+  def _embed(self):
+    page_count = (len(self.roles) + self.PAGE_SIZE - 1) // self.PAGE_SIZE
+    selected_role = self.ctx.guild.get_role(self.selected_role_id)
+    selected = selected_role.mention if selected_role else "None"
+    return discord.Embed(
+      title="Manage Member Roles",
+      description=(
+        f"Target: {self.member.mention}\n"
+        f"Selected role: {selected}\n"
+        f"Page **{self.page + 1}/{page_count}** · "
+        f"**{len(self.roles)}** manageable roles."
+      ),
+      color=0xFF0000
+    )
+
+  async def interaction_check(self, interaction):
+    if interaction.user.id == self.ctx.author.id:
+      return True
+    await interaction.response.send_message(
+      "Only the moderator who opened this role manager can use it.",
+      ephemeral=True
+    )
+    return False
+
+  async def select_role(self, interaction):
+    self.selected_role_id = int(self.role_select.values[0])
+    await interaction.response.edit_message(embed=self._embed(), view=self)
+
+  async def _change_page(self, interaction, offset):
+    self.page += offset
+    self.selected_role_id = None
+    self.remove_item(self.role_select)
+    self._add_role_select()
+    self.previous_button.disabled = self.page == 0
+    self.next_button.disabled = (
+      (self.page + 1) * self.PAGE_SIZE >= len(self.roles)
+    )
+    await interaction.response.edit_message(embed=self._embed(), view=self)
+
+  async def previous_page(self, interaction):
+    await self._change_page(interaction, -1)
+
+  async def next_page(self, interaction):
+    await self._change_page(interaction, 1)
+
+  async def cancel(self, interaction):
+    self.stop()
+    await interaction.response.edit_message(
+      embed=discord.Embed(title="Role management cancelled."),
+      view=None
+    )
+
+  async def add_role(self, interaction):
+    await self._apply_role(interaction, add=True)
+
+  async def remove_role(self, interaction):
+    await self._apply_role(interaction, add=False)
+
+  async def _apply_role(self, interaction, *, add):
+    guild = self.ctx.guild
+    role = guild.get_role(self.selected_role_id) if self.selected_role_id else None
+    member = guild.get_member(self.member.id)
+    moderator = guild.get_member(self.ctx.author.id)
+    bot_member = guild.me
+
+    if role is None or member is None or moderator is None or bot_member is None:
+      await interaction.response.send_message(
+        "The member or selected role is no longer available.",
+        ephemeral=True
+      )
+      return
+
+    is_server_owner = moderator.id == guild.owner_id
+    if (
+      not moderator.guild_permissions.manage_roles
+      or (not is_server_owner and moderator.top_role <= member.top_role)
+      or (not is_server_owner and role >= moderator.top_role)
+    ):
+      await interaction.response.send_message(
+        "Your permissions or role hierarchy no longer allow this change.",
+        ephemeral=True
+      )
+      return
+
+    if (
+      not bot_member.guild_permissions.manage_roles
+      or role.is_default()
+      or role.managed
+      or role >= bot_member.top_role
+    ):
+      await interaction.response.send_message(
+        "The bot cannot manage this role. Check its Manage Roles permission "
+        "and role position.",
+        ephemeral=True
+      )
+      return
+
+    if add and role in member.roles:
+      await interaction.response.send_message(
+        f"{member.mention} already has {role.mention}.",
+        ephemeral=True
+      )
+      return
+    if not add and role not in member.roles:
+      await interaction.response.send_message(
+        f"{member.mention} does not have {role.mention}.",
+        ephemeral=True
+      )
+      return
+
+    try:
+      if add:
+        await member.add_roles(
+          role, reason=f"Role added by moderator {moderator} ({moderator.id})"
+        )
+      else:
+        await member.remove_roles(
+          role, reason=f"Role removed by moderator {moderator} ({moderator.id})"
+        )
+    except discord.Forbidden:
+      await interaction.response.send_message(
+        "Discord denied the role change. Check the bot's permissions and "
+        "role hierarchy.",
+        ephemeral=True
+      )
+      return
+    except discord.HTTPException:
+      await interaction.response.send_message(
+        "Discord could not complete the role change. Try again later.",
+        ephemeral=True
+      )
+      return
+
+    self.stop()
+    action = "added to" if add else "removed from"
+    await interaction.response.edit_message(
+      embed=discord.Embed(
+        description=f"{role.mention} was {action} {member.mention}.",
+        color=0xFF0000
+      ),
+      view=None
+    )
+
+
 class Role(commands.Cog):
 
   def __init__(self, bot):
     self.bot = bot
     self.color = 0xFF0000
+
+
+  @commands.command(
+    name="manageroll",
+    aliases=["managerole"],
+    help="Open an interactive role manager for a member."
+  )
+  @blacklist_check()
+  @ignore_check()
+  @commands.cooldown(1, 5, commands.BucketType.user)
+  @commands.has_permissions(manage_roles=True)
+  @commands.bot_has_permissions(manage_roles=True)
+  @commands.guild_only()
+  async def manageroll(self, ctx, member: discord.Member):
+    if not ctx.author.guild_permissions.manage_roles:
+      return await ctx.send("You need the **Manage Roles** permission.")
+
+    if (
+      ctx.author.id != ctx.guild.owner_id
+      and ctx.author.top_role <= member.top_role
+    ):
+      return await ctx.send(
+        "You cannot manage roles for a member with an equal or higher role."
+      )
+
+    if ctx.guild.me is None:
+      return await ctx.send("I could not resolve my member role in this server.")
+
+    roles = [
+      role for role in ctx.guild.roles
+      if not role.is_default()
+      and not role.managed
+      and role < ctx.guild.me.top_role
+      and (
+        ctx.author.id == ctx.guild.owner_id
+        or role < ctx.author.top_role
+      )
+    ]
+    roles.sort(key=lambda role: role.position, reverse=True)
+    if not roles:
+      return await ctx.send("No roles are manageable by you and the bot.")
+
+    view = ManageRoleView(ctx, member, roles)
+    view.message = await ctx.send(embed=view._embed(), view=view)
 
 
   @commands.group(name="role",invoke_without_command=True)

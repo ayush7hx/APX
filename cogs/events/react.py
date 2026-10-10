@@ -11,6 +11,9 @@ class React(commands.Cog):
     async def on_message(self, message):
         if message.author.bot:
             return
+        if any(user.id in self.bot.owner_ids for user in message.mentions):
+            return
+
         for owner in self.bot.owner_ids:
             if f"<@{owner}>" in message.content:
                 try:

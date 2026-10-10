@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands, Interaction
 from difflib import get_close_matches
-from contextlib import suppress
 from core import Context
 from core.zyrox import zyrox
 from core.Cog import Cog
@@ -12,7 +11,6 @@ import json
 import os
 from utils import help as vhelp
 from utils import Paginator, DescriptionEmbedPaginator, FieldPagePaginator, TextPaginator
-import asyncio
 from utils.config import serverLink
 from utils.Tools import *
 
@@ -137,23 +135,17 @@ class HelpCommand(commands.HelpCommand):
       await self.send_ignore_message(ctx, "command")
       return
 
-    # Show loading embed
     loading_embed = discord.Embed(
       description=f"{get_emoji('loadingred')} Loading help Menu...",
       color=0xFF0000
     )
-    loading_msg = await ctx.reply(embed=loading_embed)
+    loading_msg = await ctx.reply(embed=loading_embed, mention_author=False)
 
-    # Wait 2 seconds
-    await asyncio.sleep(2)
-
-    # Delete loading message
-    with suppress(discord.NotFound):
-      await loading_msg.delete()
-
-    data = await getConfig(self.context.guild.id)
-    prefix = data["prefix"]
-    filtered = await self.filter_commands(self.context.bot.walk_commands(), sort=True)
+    if ctx.guild:
+      data = await getConfig(ctx.guild.id)
+      prefix = data["prefix"]
+    else:
+      prefix = ctx.prefix or "?"
 
     e = get_emoji  # shortcut
 
@@ -212,7 +204,7 @@ class HelpCommand(commands.HelpCommand):
     )
     
     view = vhelp.View(mapping=mapping, ctx=self.context, homeembed=embed, ui=2)
-    await ctx.reply(embed=embed, view=view)
+    await loading_msg.edit(embed=embed, view=view)
 
   async def send_command_help(self, command):
     ctx = self.context

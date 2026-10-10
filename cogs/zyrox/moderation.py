@@ -7,12 +7,12 @@ class _moderation(commands.Cog):
         self.bot = bot
 
     """Moderation commands"""
-  
+
     def help_custom(self):
-		      emoji = '• '
-		      label = "Moderation Commands"
-		      description = "Show you Commands of Moderation"
-		      return emoji, label, description
+        emoji = '🔹'
+        label = "Moderation Commands"
+        description = "Show you Commands of Moderation"
+        return emoji, label, description
 
     @commands.group()
     async def __Moderation__(self, ctx: commands.Context):

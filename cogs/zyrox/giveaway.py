@@ -7,12 +7,12 @@ class _giveaway(commands.Cog):
         self.bot = bot
 
     """Giveaway commands"""
-  
+
     def help_custom(self):
-		      emoji = '• '
-		      label = "Giveaway Commands"
-		      description = "Show you Commands of Giveaway"
-		      return emoji, label, description
+        emoji = '🔹'
+        label = "Giveaway Commands"
+        description = "Show you Commands of Giveaway"
+        return emoji, label, description
 
     @commands.group()
     async def __Giveaway__(self, ctx: commands.Context):

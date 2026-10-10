@@ -20,6 +20,7 @@ openai
 pillow==11.0.0
 psutil
 pymongo
+pytz
 python-dateutil
 python-dotenv
 PyYAML

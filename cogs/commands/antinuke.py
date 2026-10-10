@@ -109,12 +109,12 @@ class Antinuke(commands.Cog):
         await setup_message.edit(embed=setup_embed)
 
         await asyncio.sleep(1)
-        setup_embed.description += "\n✅ | Crafting and configuring the INF Supreme role..."
+        setup_embed.description += "\n✅ | Crafting and configuring the APX Supreme role..."
         await setup_message.edit(embed=setup_embed)
         
         try:
           role = await ctx.guild.create_role(
-            name="INF Supreme™",
+            name="APX Supreme",
             color=0xFF0000,
             permissions=discord.Permissions(administrator=True),
             hoist=False,
@@ -132,7 +132,7 @@ class Antinuke(commands.Cog):
           return
 
         await asyncio.sleep(1)
-        setup_embed.description += "\n✅| Ensuring precise placement of the INF Supreme™ role..."
+        setup_embed.description += "\n✅| Ensuring precise placement of the APX Supreme role..."
         await setup_message.edit(embed=setup_embed)
         try:
           await ctx.guild.edit_role_positions(positions={role: 1})

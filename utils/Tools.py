@@ -103,6 +103,9 @@ def restart_program():
 def blacklist_check():
 
   async def predicate(ctx):
+    if ctx.is_bot_owner:
+      return True
+
     async with aiosqlite.connect('db/block.db') as db:
       cursor = await db.execute("SELECT 1 FROM user_blacklist WHERE user_id = ?", (str(ctx.author.id),))
       user_blacklisted = await cursor.fetchone()
@@ -148,6 +151,9 @@ async def get_ignore_data(guild_id: int) -> dict:
 
 def ignore_check():
     async def predicate(ctx):
+        if ctx.is_bot_owner:
+            return True
+
         data = await get_ignore_data(ctx.guild.id)
         ch = data["channel"]
         iuser = data["user"]

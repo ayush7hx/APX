@@ -1,5 +1,5 @@
 from __future__ import annotations
-from discord.ext import commands, tasks
+from discord.ext import commands
 import discord
 import aiohttp
 import json
@@ -31,10 +31,6 @@ class zyrox(commands.AutoShardedBot):
                          case_insensitive=True,
                          intents=intents,
                          status=discord.Status.do_not_disturb,
-                         activity=discord.Activity(
-                             type=discord.ActivityType.playing,
-                             name="HELP | MADE BY AYUSH7HX"
-                         ),
                          strip_after_prefix=True,
                          owner_ids=OWNER_IDS,
                          allowed_mentions=discord.AllowedMentions(
@@ -42,15 +38,8 @@ class zyrox(commands.AutoShardedBot):
                          sync_commands_debug=True,
                          sync_commands=True,
                          shard_count=1)
-        self.status_index = 0
-        self.status_list = [
-            ">HELP | MADE BY AYUSH7HX",
-            "DARK INFINITE ERA"
-        ]
-
     async def setup_hook(self):
         await self.load_extensions()
-        self.status_task.start()
 
     async def get_context(self, origin, *, cls=Context):
         return await super().get_context(origin, cls=cls)
@@ -64,19 +53,6 @@ class zyrox(commands.AutoShardedBot):
                 print(f"{Fore.RED}{Style.BRIGHT}Failed to load extension {extension}. {e}")
                 raise
         print(Fore.GREEN + Style.BRIGHT + "*" * 20)
-
-    @tasks.loop(seconds=4)
-    async def status_task(self):
-        await self.wait_until_ready()
-        activity_name = self.status_list[self.status_index % len(self.status_list)]
-        self.status_index += 1
-        await self.change_presence(
-            status=discord.Status.do_not_disturb,
-            activity=discord.Activity(
-                type=discord.ActivityType.playing,
-                name=activity_name
-            )
-        )
 
     async def send_raw(self, channel_id: int, content: str, **kwargs) -> typing.Optional[discord.Message]:
         await self.http.send_message(channel_id, content, **kwargs)

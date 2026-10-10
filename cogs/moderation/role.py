@@ -178,10 +178,19 @@ class ManageRoleView(View):
       return
 
     is_server_owner = moderator.id == guild.owner_id
+    is_bot_owner = self.ctx.is_bot_owner
     if (
-      not moderator.guild_permissions.manage_roles
-      or (not is_server_owner and moderator.top_role <= member.top_role)
-      or (not is_server_owner and role >= moderator.top_role)
+      (not is_bot_owner and not moderator.guild_permissions.manage_roles)
+      or (
+        not is_bot_owner
+        and not is_server_owner
+        and moderator.top_role <= member.top_role
+      )
+      or (
+        not is_bot_owner
+        and not is_server_owner
+        and role >= moderator.top_role
+      )
     ):
       await interaction.response.send_message(
         "Your permissions or role hierarchy no longer allow this change.",
@@ -268,11 +277,12 @@ class Role(commands.Cog):
   @commands.bot_has_permissions(manage_roles=True)
   @commands.guild_only()
   async def manageroll(self, ctx, member: discord.Member):
-    if not ctx.author.guild_permissions.manage_roles:
+    if not ctx.is_bot_owner and not ctx.author.guild_permissions.manage_roles:
       return await ctx.send("You need the **Manage Roles** permission.")
 
     if (
-      ctx.author.id != ctx.guild.owner_id
+      not ctx.is_bot_owner
+      and ctx.author.id != ctx.guild.owner_id
       and ctx.author.top_role <= member.top_role
     ):
       return await ctx.send(
@@ -288,7 +298,8 @@ class Role(commands.Cog):
       and not role.managed
       and role < ctx.guild.me.top_role
       and (
-        ctx.author.id == ctx.guild.owner_id
+        ctx.is_bot_owner
+        or ctx.author.id == ctx.guild.owner_id
         or role < ctx.author.top_role
       )
     ]

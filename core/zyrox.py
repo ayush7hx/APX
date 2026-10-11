@@ -49,6 +49,46 @@ class zyrox(commands.AutoShardedBot):
                 "CREATE TABLE IF NOT EXISTS np (id INTEGER PRIMARY KEY)"
             )
             await db.commit()
+
+        async with aiosqlite.connect("db/ignore.db") as db:
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS ignored_commands "
+                "(guild_id INTEGER, command_name TEXT)"
+            )
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS ignored_channels "
+                "(guild_id INTEGER, channel_id INTEGER)"
+            )
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS ignored_users "
+                "(guild_id INTEGER, user_id INTEGER)"
+            )
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS bypassed_users "
+                "(guild_id INTEGER, user_id INTEGER)"
+            )
+            await db.commit()
+
+        async with aiosqlite.connect("db/block.db") as db:
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS user_blacklist "
+                "(user_id INTEGER PRIMARY KEY, "
+                "timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+            )
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS guild_blacklist "
+                "(guild_id INTEGER PRIMARY KEY, "
+                "timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+            )
+            await db.commit()
+
+        async with aiosqlite.connect("db/topcheck.db") as db:
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS topcheck "
+                "(guild_id INTEGER PRIMARY KEY, enabled INTEGER)"
+            )
+            await db.commit()
+
         await self.load_extensions()
 
     async def get_context(self, origin, *, cls=Context):

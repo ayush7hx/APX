@@ -105,7 +105,7 @@ class Stats(commands.Cog):
         ram_usage = psutil.virtual_memory().percent
 
         CAT_ICON = "https://cdn.discordapp.com/attachments/1456507376868921468/1503968991063052318/djfqwvs.jpg"
-        FOOTER_TEXT = "Developed By Ayush7hx"
+        FOOTER_TEXT = "Developed By INF YASHU"
 
         quick_embed = Embed(title="INF Stats Panel", color=0xFF0000)
         quick_embed.add_field(name="• Quick Overview", value=f"**Servers : {len(self.bot.guilds)}\nUsers : {total_users}\nUptime : {uptime}**")
@@ -133,7 +133,7 @@ class Stats(commands.Cog):
         team_embed = Embed(title="Team Stats",
                            description="`There is only one person Who Made Me, Thanks To Him ❤️.`", color=0xFF0000)
         team_embed.add_field(name="Developer",
-                             value="**[01]. [Ayush7hx](https://discord.com/users/1258831252748894436)**", inline=False)
+                             value="**[01]. [INF YASHU](https://discord.com/users/1258831252748894436)**", inline=False)
         team_embed.set_footer(text=FOOTER_TEXT, icon_url=CAT_ICON)
         team_embed.set_thumbnail(url=ctx.me.display_avatar.url)
 

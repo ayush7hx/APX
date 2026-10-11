@@ -126,4 +126,4 @@ class AntiLink(commands.Cog):
 
     @commands.Cog.listener()
     async def on_rate_limit(self, message):
-        await asyncio.sleep(10)
+        await asyncio.sleep(1)

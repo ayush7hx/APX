@@ -86,7 +86,7 @@ class Warn(commands.Cog):
         aliases=["warnuser"])
     @blacklist_check()
     @ignore_check()
-    @commands.cooldown(1, 10, commands.BucketType.member)
+    @commands.cooldown(1, 3, commands.BucketType.member)
     @commands.max_concurrency(1, per=commands.BucketType.default, wait=False)
     @commands.guild_only()
     @commands.has_permissions(moderate_members=True)

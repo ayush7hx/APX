@@ -16,6 +16,7 @@ class Kick(commands.Cog):
     @blacklist_check()
     @ignore_check()
     @top_check()
+    @commands.cooldown(1, 2, commands.BucketType.member)
     @commands.has_permissions(kick_members=True)
     @commands.bot_has_permissions(kick_members=True)
     @commands.guild_only()

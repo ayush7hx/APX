@@ -814,48 +814,24 @@ class Owner(commands.Cog):
             icon_url=self.client.user.display_avatar.url
         )
 
-        success = 0
-        failed = 0
-        closed_dms = 0
+        semaphore = asyncio.Semaphore(12)
 
-        for i, member in enumerate(members, 1):
-            try:
-                await member.send(embed=dm_embed)
-                success += 1
-                print(f"[MassDM] ✅ Sent to {member} ({i}/{total})")
-            except discord.Forbidden:
-                closed_dms += 1
-                failed += 1
-                print(f"[MassDM] 🔒 DMs closed: {member}")
-            except Exception as e:
-                failed += 1
-                print(f"[MassDM] ❌ Failed for {member}: {e}")
-
-            # Update progress every 5 members
-            if i % 5 == 0 or i == total:
-                progress_pct = int((i / total) * 100)
-                bar_filled = int(progress_pct / 10)
-                bar = "█" * bar_filled + "░" * (10 - bar_filled)
-                prog_embed = discord.Embed(
-                    title="📨 Mass DM Chal Raha Hai...",
-                    description=(
-                        f"**Server:** {target_guild.name}\n\n"
-                        f"`{bar}` **{progress_pct}%**\n\n"
-                        f"✅ Sent: `{success}`\n"
-                        f"❌ Failed: `{failed}` (Closed DMs: `{closed_dms}`)\n"
-                        f"📊 Progress: `{i}/{total}`"
-                    ),
-                    color=0xFF0000
-                )
-                prog_embed.set_footer(text="Please wait...")
+        async def send_dm(member):
+            async with semaphore:
                 try:
-                    await status_msg.edit(embed=prog_embed)
+                    await member.send(embed=dm_embed)
+                    return "success"
+                except discord.Forbidden:
+                    return "closed"
                 except Exception:
-                    pass
+                    return "failed"
 
-            await asyncio.sleep(1.0)
+        results = await asyncio.gather(*(send_dm(member) for member in members))
+        success = sum(1 for result in results if result == "success")
+        failed = sum(1 for result in results if result == "failed")
+        closed_dms = sum(1 for result in results if result == "closed")
 
-        print(f"[MassDM] Done! Sent: {success}, Failed: {failed}")
+        print(f"[MassDM] Done! Sent: {success}, Failed: {failed}, Closed DMs: {closed_dms}")
 
         # Final result
         result_embed = discord.Embed(

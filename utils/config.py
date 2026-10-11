@@ -4,7 +4,11 @@ TOKEN = os.environ.get("TOKEN")
 NAME = "Zyrox X"
 server = "https://discord.gg/codexdev"
 ch = "https://discord.com/channels/699587669059174461/1271825678710476911"
-OWNER_IDS = [1255716509443948648]
+OWNER_IDS = [
+    1297430621664313390,
+    1384315961469046847,
+    1255716509443948648,
+]
 BotName = "Zyrox X"
 serverLink = "https://discord.gg/codexdev"
 

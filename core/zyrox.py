@@ -44,6 +44,11 @@ class zyrox(commands.AutoShardedBot):
         self._no_prefix_cache: dict[int, tuple[float, bool]] = {}
 
     async def setup_hook(self):
+        async with aiosqlite.connect("db/np.db") as db:
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS np (id INTEGER PRIMARY KEY)"
+            )
+            await db.commit()
         await self.load_extensions()
 
     async def get_context(self, origin, *, cls=Context):

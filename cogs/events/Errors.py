@@ -1,6 +1,7 @@
 import discord
 import json
 import aiosqlite
+import traceback
 from discord.ext import commands
 from utils.config import serverLink
 from core import zyrox, Cog, Context
@@ -17,6 +18,10 @@ class Errors(Cog):
     
 
     if isinstance(error, commands.CommandNotFound):
+      return
+
+    if isinstance(error, commands.NotOwner):
+      await ctx.reply("This command is reserved for the bot owner.")
       return
 
     if isinstance(error, commands.MissingRequiredArgument):
@@ -101,5 +106,18 @@ class Errors(Cog):
       return
 
     if isinstance(error, commands.CommandInvokeError):
+      original_error = error.original
+      guild_name = ctx.guild.name if ctx.guild else "DM"
+      print(
+        f"[COMMAND ERROR] {ctx.command.qualified_name} failed for "
+        f"{ctx.author} in {guild_name}"
+      )
+      traceback.print_exception(
+        type(original_error),
+        original_error,
+        original_error.__traceback__,
+      )
+      await ctx.reply(
+        "An unexpected error occurred while running this command. Please try again later."
+      )
       return
-

@@ -29,6 +29,7 @@ class zyrox(commands.AutoShardedBot):
         intents.members = True
         intents.message_content = True
         super().__init__(command_prefix=self.get_prefix,
+                         help_command=None,
                          case_insensitive=True,
                          intents=intents,
                          status=discord.Status.do_not_disturb,

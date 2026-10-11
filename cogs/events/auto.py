@@ -5,6 +5,7 @@ from utils.Tools import *
 from utils.config import BotName, serverLink
 from discord.ext import commands
 from discord.ui import Button, View
+from plain_dm import send_plain_dm
 
 class Autorole(Cog):
     def __init__(self, bot: zyrox):
@@ -16,7 +17,7 @@ class Autorole(Cog):
         async for entry in guild.audit_logs(limit=3):
             if entry.action == discord.AuditLogAction.bot_add:
                 embed = discord.Embed(
-                   description=f"🔹 **Thanks for adding me.**\n\n• My default prefix is `>`\n•> Use the `>help` command to see a list of commands\n• For detailed guides, FAQ and information, visit our **[Support Server](https://discord.gg/4NHmRUn9HJ)**",
+                   description=f"🔹 **Thanks for adding me.**\n\n• My default prefix is `>`\n• For detailed guides, FAQ and information, visit our **[Support Server](https://discord.gg/4NHmRUn9HJ)**",
                     color=0xFF0000
                )
                 embed.set_thumbnail(url=entry.user.avatar.url if entry.user.avatar else entry.user.default_avatar.url)
@@ -32,6 +33,6 @@ class Autorole(Cog):
                 if guild.icon:
                     embed.set_author(name=guild.name, icon_url=guild.icon.url)
                 try:
-                    await entry.user.send(embed=embed, view=view)
+                    await send_plain_dm(entry.user, embed=embed, view=view)
                 except Exception as e:
                     print(e)

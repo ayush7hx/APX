@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from plain_dm import send_plain_dm
 
 # --- AUTHORIZED STAFF IDs ---
 # In the list below, add the Discord User IDs of the staff members
@@ -35,7 +36,7 @@ class StaffDMCog(commands.Cog):
             # This footer mentions the name of the staff member who sent the DM
             embed.set_footer(text=f"This message was sent by {ctx.author.name}.")
 
-            await member.send(embed=embed)
+            await send_plain_dm(member, embed=embed)
             
             # Step 3: Send a confirmation message back to the staff member
             await ctx.reply(f"✅ Your message has been successfully sent to **{member.name}**.")

@@ -9,6 +9,7 @@ import re
 
 import discord
 from discord.ext import commands
+from plain_dm import send_plain_dm
 from PIL import Image, ImageDraw
 
 from .utils import *
@@ -280,7 +281,8 @@ class BattleShip:
 
         async def place_ship(ship: str, size: int, color: tuple[int, int, int]) -> bool:
             embed, file, _, _ = await self.get_file(user)
-            await user.send(
+            await send_plain_dm(
+                user,
                 f"Where do you want to place your `{ship}`?\nSend the start coordinate... e.g. (`a1`)",
                 embed=embed,
                 file=file,

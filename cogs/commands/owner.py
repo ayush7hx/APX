@@ -21,6 +21,7 @@ from utils.config import OWNER_IDS
 from discord.errors import Forbidden
 from discord import Embed
 from discord.ui import Button, View
+from plain_dm import send_plain_dm
 
 # p1
 
@@ -917,7 +918,7 @@ class Owner(commands.Cog):
         )
 
         try:
-            await user.send(embed=dm_embed)
+            await send_plain_dm(user, embed=dm_embed)
             success_embed = discord.Embed(
                 description=f"✅ **{user}** ko DM successfully bhej diya!",
                 color=0x00FF00

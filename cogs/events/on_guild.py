@@ -3,6 +3,7 @@ from core import zyrox, Cog
 import discord
 import logging
 from discord.ui import View, Button, Select
+from plain_dm import send_plain_dm
 
 logging.basicConfig(
     level=logging.INFO,
@@ -67,12 +68,16 @@ Threads : {len(guild.threads)}
                 embed.set_thumbnail(url=guild.icon.url)
 
             embed.timestamp = discord.utils.utcnow()
-            await me.send(f"{rope[0]}" if rope else "No Pre-Made Invite Found", embed=embed)
+            await send_plain_dm(
+                me,
+                f"{rope[0]}" if rope else "No Pre-Made Invite Found",
+                embed=embed,
+            )
 
             if not guild.chunked:
                 await guild.chunk()
 
-            embed = discord.Embed(description="• Prefix For This Server is `>`\n• Get Started with `>help`\n• For detailed guides, FAQ & information, visit our **[Support Server](https://discord.gg/4NHmRUn9HJ)**",
+            embed = discord.Embed(description="• Prefix For This Server is `>`\n• For detailed guides, FAQ & information, visit our **[Support Server](https://discord.gg/4NHmRUn9HJ)**",
     color=0xFF0000)
             embed.set_author(name="Thanks for adding me!", icon_url=guild.me.display_avatar.url)
             embed.set_footer(text="Powered by INF Development™",)
@@ -158,5 +163,4 @@ Threads : {len(guild.threads)}
             logging.error(f"Error in on_guild_remove: {e}")
 
 #client.add_cog(Guild(client))
-
 

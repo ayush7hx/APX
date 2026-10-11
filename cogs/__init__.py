@@ -3,7 +3,6 @@ from core import zyrox
 from colorama import Fore, Style, init
 
 
-from .commands.help import Help
 from .commands.general import General
 from .commands.automod import Automod
 from .commands.welcome import Welcomer
@@ -168,7 +167,7 @@ from .moderation.snipe import Snipe
 
 async def setup(bot: zyrox):
   cogs_to_load = [
-        Help, General, Moderation, Automod, Welcomer, Fun, Games, Extra,
+        General, Moderation, Automod, Welcomer, Fun, Games, Extra,
         Voice, Owner, Customrole, afk, Embed, Media, Ignore, TicketCog, Logging,
         Invcrole, Steal, Timer,
         Blacklist, Block, Nightmode, Badges, Antinuke, Whitelist, 
@@ -181,7 +180,6 @@ async def setup(bot: zyrox):
     ]
 
 
-  await bot.add_cog(Help(bot))
   await bot.add_cog(General(bot))
   await bot.add_cog(Automod(bot))
   await bot.add_cog(Welcomer(bot))

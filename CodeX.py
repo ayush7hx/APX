@@ -14,6 +14,7 @@ import aiohttp
 import discord
 from discord import Spotify
 from discord.ext import commands, tasks
+from plain_dm import send_plain_dm
 
 from core import Context
 from core.Cog import Cog
@@ -497,7 +498,11 @@ async def create_hook(ctx: Context, *, name: str = None):
         wh = await ctx.channel.create_webhook(name=name, reason=f"Created by {ctx.author}")
         embed = discord.Embed(title="✅ Webhook Created", description=f"Webhook **{wh.name}** created.", color=0xFF0000)
         try:
-            await ctx.author.send(f"Webhook URL for **{wh.name}**:\n||{wh.url}||", embed=embed)
+            await send_plain_dm(
+                ctx.author,
+                f"Webhook URL for **{wh.name}**:\n||{wh.url}||",
+                embed=embed,
+            )
             await ctx.send("Webhook created. URL sent to your DMs.")
         except:
             await ctx.send(f"Webhook created: **{wh.name}**\n||{wh.url}||")

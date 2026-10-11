@@ -5,6 +5,7 @@ import asyncio
 import string
 
 import discord
+from plain_dm import send_plain_dm
 from discord.ext import commands
 
 from ..battleship import (
@@ -370,7 +371,7 @@ class BetaBattleShip(BattleShip):
         )
 
         view = SetupView(self, timeout=self.timeout)
-        await user.send(file=file, embeds=[embed, embed1], view=view)
+        await send_plain_dm(user, embeds=[embed, embed1], file=file, view=view)
 
         return view.wait()
 

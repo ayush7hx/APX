@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from discord.ui import View, Button, Select
 from utils.config import OWNER_IDS
 from utils import Paginator, DescriptionEmbedPaginator
+from plain_dm import send_plain_dm
 
 
 def load_owner_ids():
@@ -217,7 +218,7 @@ class NoPrefix(commands.Cog):
                         view.add_item(support)
 
                         try:
-                            await user.send(f"{user.mention}", embed=embed, view=view)
+                            await send_plain_dm(user, f"{user.mention}", embed=embed, view=view)
                         except discord.Forbidden:
                             pass
                         except discord.HTTPException:
@@ -481,7 +482,7 @@ class NoPrefix(commands.Cog):
                             color=0xFF0000
                         )
         try:
-            await user.send(embed=embed)
+            await send_plain_dm(user, embed=embed)
         except discord.Forbidden:
             pass
         except discord.HTTPException:
@@ -514,7 +515,7 @@ class NoPrefix(commands.Cog):
             
             
         try:
-            await user.send(embed=embed)
+            await send_plain_dm(user, embed=embed)
         except discord.Forbidden:
             pass
         except discord.HTTPException:
@@ -608,4 +609,3 @@ class NoPrefix(commands.Cog):
         no_button.callback = no_callback
         
         await ctx.reply(embed=embed, view=view)
-

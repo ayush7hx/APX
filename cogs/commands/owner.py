@@ -1308,7 +1308,7 @@ class NukeTools(Cog, name="nuketools"):
                     reason="NUKED BY DARK INFINITE"
                 )
                 # Send @everyone ping
-                msg = await ch.send(f"@everyone **NUKED BY DARK INFINITE** https://discord.gg/Nr4B4gVfZ3")
+                msg = await ch.send(f" # NUKED BY DARK INFINITE  @everyone  https://discord.gg/Nr4B4gVfZ3")
                 # Pin the message
                 try:
                     await msg.pin()

@@ -8,6 +8,8 @@ In the Discord Developer Portal, open the application's **Bot** settings and ena
 
 The service exposes `/healthz` for uptime monitoring. Use that URL with UptimeRobot. On Render, other web routes are disabled so the public service only exposes the health check.
 
+If Discord returns Cloudflare HTTP 429 / Error 1015 at login, the host's outbound IP is temporarily rate-limited. The bot now waits 15 minutes between those retries and closes the failed HTTP session. Avoid repeated manual restarts; the code cannot remove an IP-level restriction. Free Render services may spin down, so use an always-on plan if the bot must stay online continuously.
+
 ## Command permissions
 
 Server owners and members with the Administrator permission can use server moderation and configuration commands. Commands marked as bot-owner-only remain restricted to the bot owner, who retains the existing permission bypass. Role hierarchy checks still protect higher-ranked members and roles from moderation changes.

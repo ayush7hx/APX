@@ -6,6 +6,7 @@ import threading
 import traceback
 from threading import Thread
 from datetime import datetime
+import math
 import random
 import time
 import sqlite3
@@ -308,6 +309,8 @@ def _store_dm(uid: str, user_info: dict, msg: dict):
 
 client = zyrox()
 tree   = client.tree
+_commands_sync_attempted = False
+_ready_tasks_started = False
 
 
 # ─── DM LISTENER ──────────────────────────────────────────────────────────────
@@ -396,10 +399,12 @@ async def update_stats():
             users   = sum(g.member_count for g in client.guilds if g.member_count)
             sc = client.get_channel(SERVER_COUNT_CHANNEL_ID)
             uc = client.get_channel(USER_COUNT_CHANNEL_ID)
-            if sc:
-                await sc.edit(name=f"Servers: {servers}")
-            if uc:
-                await uc.edit(name=f"Users: {users}")
+            server_name = f"Servers: {servers}"
+            user_name = f"Users: {users}"
+            if sc and sc.name != server_name:
+                await sc.edit(name=server_name)
+            if uc and uc.name != user_name:
+                await uc.edit(name=user_name)
         except Exception as e:
             print(f"Stats update error: {e}")
         await asyncio.sleep(600)
@@ -408,6 +413,8 @@ async def update_stats():
 # ─── EVENTS ───────────────────────────────────────────────────────────────────
 @client.event
 async def on_ready():
+    global _commands_sync_attempted, _ready_tasks_started
+
     await client.wait_until_ready()
     print("""
         \033[1;31m
@@ -423,14 +430,19 @@ async def on_ready():
     print(f"Logged in as: {client.user}")
     print(f"Connected to: {len(client.guilds)} guilds")
     print(f"Connected to: {len(client.users)} users")
-    try:
-        synced      = await client.tree.sync()
-        all_commands = list(client.commands)
-        print(f"Synced Total {len(all_commands)} Client Commands and {len(synced)} Slash Commands")
-    except Exception as e:
-        print(e)
-    client.loop.create_task(update_stats())
-    client.loop.create_task(_catch_up_offline_dms())
+    if not _commands_sync_attempted:
+        _commands_sync_attempted = True
+        try:
+            synced = await client.tree.sync()
+            all_commands = list(client.commands)
+            print(f"Synced Total {len(all_commands)} Client Commands and {len(synced)} Slash Commands")
+        except Exception as e:
+            print(f"Slash command sync failed: {type(e).__name__}")
+
+    if not _ready_tasks_started:
+        _ready_tasks_started = True
+        client.loop.create_task(update_stats())
+        client.loop.create_task(_catch_up_offline_dms())
 
 
 @client.event
@@ -563,6 +575,23 @@ async def reaction(ctx: Context):
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
+def _startup_retry_delay(error: Exception, attempt: int) -> int:
+    if isinstance(error, discord.HTTPException) and error.status == 429:
+        headers = getattr(getattr(error, "response", None), "headers", {}) or {}
+        retry_after = headers.get("Retry-After")
+        if retry_after:
+            try:
+                return max(math.ceil(float(retry_after)), 1)
+            except (TypeError, ValueError, OverflowError):
+                pass
+
+        body = str(getattr(error, "text", error)).lower()
+        if "cloudflare" in body or "error 1015" in body:
+            return 900
+
+    return min(30 * (2 ** min(attempt, 5)), 900)
+
+
 async def main():
     if not TOKEN:
         raise RuntimeError("Set the Discord bot token in the TOKEN environment variable.")
@@ -570,20 +599,45 @@ async def main():
     async with client:
         os.system("clear")
         await client.load_extension("jishaku")
-        max_retries = 5
-        for attempt in range(max_retries):
+
+        retry_count = 0
+        while not client.is_closed():
             try:
                 await client.start(TOKEN)
-                break
-            except discord.HTTPException as e:
-                if e.status == 429:
-                    wait_time = min((2 ** attempt) + random.random(), 60)
-                    print(f"Rate limited. Retrying in {wait_time:.2f}s...")
-                    await asyncio.sleep(wait_time)
-                else:
+            except asyncio.CancelledError:
+                raise
+            except discord.HTTPException as error:
+                if error.status not in {429, 500, 502, 503, 504}:
                     raise
-        else:
-            raise Exception("Bot failed to start after retries.")
+                retry_error = error
+            except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as error:
+                retry_error = error
+            else:
+                if client.is_closed():
+                    break
+                retry_error = RuntimeError("Discord client stopped unexpectedly")
+
+            retry_delay = _startup_retry_delay(retry_error, retry_count)
+            is_cloudflare_block = (
+                isinstance(retry_error, discord.HTTPException)
+                and retry_error.status == 429
+                and ("cloudflare" in str(getattr(retry_error, "text", retry_error)).lower()
+                     or "error 1015" in str(getattr(retry_error, "text", retry_error)).lower())
+            )
+            if is_cloudflare_block:
+                print(f"Discord Cloudflare rate limit (1015); retrying in {retry_delay} seconds.")
+            elif isinstance(retry_error, discord.HTTPException):
+                print(f"Discord HTTP {retry_error.status} during startup; retrying in {retry_delay} seconds.")
+            else:
+                print(f"Discord connection failed ({type(retry_error).__name__}); retrying in {retry_delay} seconds.")
+
+            try:
+                await client.http.close()
+            except Exception as close_error:
+                print(f"Could not close failed Discord HTTP session: {type(close_error).__name__}")
+
+            retry_count = min(retry_count + 1, 5)
+            await asyncio.sleep(retry_delay)
 
 if __name__ == "__main__":
     asyncio.run(main())

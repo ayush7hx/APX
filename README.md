@@ -10,7 +10,11 @@ The project pins Render to Python `3.11.11` in both `.python-version` and `rende
 
 The service exposes `/healthz` for uptime monitoring. Use that URL with UptimeRobot. On Render, other web routes are disabled so the public service only exposes the health check.
 
-If Discord returns Cloudflare HTTP 429 / Error 1015 at login, the host's outbound IP is temporarily rate-limited. The bot now waits 15 minutes between those retries and closes the failed HTTP session. Avoid repeated manual restarts; the code cannot remove an IP-level restriction. Free Render services may spin down, so use an always-on plan if the bot must stay online continuously.
+If Discord returns Cloudflare HTTP 429 / Error 1015 at login, the host's outbound IP is temporarily rate-limited. The bot waits before retrying and logs the Discord HTTP status; code cannot bypass or clear an IP-level restriction. Avoid repeated manual restarts and let Discord's cooldown expire.
+
+Run this bot on **one host at a time**. Do not start the same bot token on both Replit and Render simultaneously: both processes use the same Discord gateway identity and can create duplicate API traffic, reconnects, and rate limits. Stop the bot on the old host before starting it on the new host.
+
+The vanity-role checker polls Discord's invite endpoint every five minutes, reuses one HTTP session, and leaves role assignments unchanged when Discord returns an error or rate limit. Startup DM catch-up also spaces requests and stops when Discord rate-limits it.
 
 ## Command permissions
 
@@ -19,6 +23,10 @@ Server owners and members with the Administrator permission can use server moder
 Optional integrations can use `GIPHY_API_KEY`, `PEXELS_API_KEY`, `SPOTIFY_CLIENT_ID`, and `SPOTIFY_CLIENT_SECRET` as Render environment variables. Set only the keys for features you use.
 
 The bot stores command state in SQLite files under `db/`. Render's free filesystem is temporary, so that state can be lost when the service restarts or redeploys. Use a persistent disk or an external database if that state must survive.
+
+## Deploy on Replit
+
+Import this repository into Replit, add `TOKEN` under **Tools → Secrets**, then run the project. The included `.replit` file starts `python CodeX.py`; dependencies are listed in `requirements.txt`. Keep the Replit deployment to one running instance, and stop it before running this token on Render.
 
 ## Local run
 

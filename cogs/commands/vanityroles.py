@@ -1,16 +1,29 @@
+import asyncio
 import discord
 from discord.ext import commands, tasks
 import aiosqlite
 import aiohttp
+import logging
 import os
 from utils.Tools import *
 
 DB_PATH = "db/vanity.db"
+log = logging.getLogger(__name__)
 
 class VanityRoles(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self._session: aiohttp.ClientSession | None = None
         self.bot.loop.create_task(self.initialize_db())
+
+    async def cog_load(self):
+        timeout = aiohttp.ClientTimeout(total=10)
+        self._session = aiohttp.ClientSession(timeout=timeout)
+
+    async def cog_unload(self):
+        self.vanity_checker.cancel()
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
 
     async def initialize_db(self):
         os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -89,13 +102,15 @@ class VanityRoles(commands.Cog):
             await db.commit()
         await ctx.send("✅ All vanity role configurations have been reset.")
 
-    @tasks.loop(seconds=15)
+    @tasks.loop(minutes=5)
     async def vanity_checker(self):
         async with aiosqlite.connect(DB_PATH) as db:
             async with db.execute("SELECT guild_id, vanity, role_id, log_channel_id, current_status FROM vanity_roles") as cursor:
                 rows = await cursor.fetchall()
 
-        for guild_id, vanity, role_id, log_channel_id, current_status in rows:
+        for index, (guild_id, vanity, role_id, log_channel_id, current_status) in enumerate(rows):
+            if index:
+                await asyncio.sleep(1)
             guild = self.bot.get_guild(guild_id)
             if not guild:
                 continue
@@ -103,13 +118,33 @@ class VanityRoles(commands.Cog):
             role = guild.get_role(role_id)
             log_channel = guild.get_channel(log_channel_id)
 
+            if self._session is None or self._session.closed:
+                raise RuntimeError("Vanity role HTTP session is not available.")
+
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(f"https://discord.com/api/v10/invites/{vanity}") as response:
-                        is_active = response.status == 200
-            except Exception as e:
-                print(f"⚠️ Error checking vanity {vanity}: {e}")
-                continue
+                async with self._session.get(f"https://discord.com/api/v10/invites/{vanity}") as response:
+                    if response.status == 200:
+                        is_active = True
+                    elif response.status == 404:
+                        is_active = False
+                    else:
+                        retry_after = response.headers.get("Retry-After")
+                        log.warning(
+                            "Vanity check for %s returned HTTP %s%s; leaving role state unchanged.",
+                            vanity,
+                            response.status,
+                            f" (retry after {retry_after}s)" if retry_after else "",
+                        )
+                        if response.status == 429:
+                            try:
+                                retry_delay = max(1, int(float(retry_after)))
+                            except (TypeError, ValueError, OverflowError):
+                                retry_delay = 300
+                            await asyncio.sleep(retry_delay)
+                        break
+            except (aiohttp.ClientError, asyncio.TimeoutError):
+                log.exception("Vanity check failed for %s; leaving role state unchanged.", vanity)
+                break
 
             # Vanity is ACTIVE
             if is_active and current_status != "active":
@@ -149,6 +184,7 @@ class VanityRoles(commands.Cog):
     @vanity_checker.before_loop
     async def before_checker(self):
         await self.bot.wait_until_ready()
+        await asyncio.sleep(60)
 
 async def setup(bot):
     cog = VanityRoles(bot)

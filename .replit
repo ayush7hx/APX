@@ -1,0 +1,2 @@
+entrypoint = "CodeX.py"
+run = "python CodeX.py"

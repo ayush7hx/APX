@@ -19,7 +19,6 @@ __pycache__/
 /db/*.json
 
 # Replit-only setup and unrelated archive
-/.replit
 /replit.nix
 /cogs/moderation/Moderation.tar
 

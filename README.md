@@ -2,11 +2,11 @@
 
 ## Deploy on Render
 
-This repository includes a Render Blueprint for a Python Web Service. On first deploy, Render will ask for the `TOKEN` environment variable; set it to the Discord bot token in Render's Environment settings. Do not put the token in a source file or commit it.
+This repository includes a Render Blueprint for a Python Web Service. Deploy it with **New → Blueprint** and select this repository. The Blueprint supplies the build command (`pip install -r requirements.txt`), start command (`python CodeX.py`), Python version, port handling, and `/healthz` check. The only required secret is `TOKEN`; enter the Discord bot token when Render prompts for it. Do not put the token in a source file or commit it. No other environment variables are required to start the bot.
 
 In the Discord Developer Portal, open the application's **Bot** settings and enable **Server Members Intent** and **Message Content Intent**. The bot requests these privileged intents for member join features and prefix commands; it does not request Presence Intent.
 
-The project pins Render to Python `3.11.11` in both `.python-version` and `render.yaml`. If an existing Render service still builds with another Python version, set `PYTHON_VERSION` to `3.11.11` in the service's Environment settings; dashboard environment variables override the Blueprint.
+The project pins Render to Python `3.11.11` in both `.python-version` and `render.yaml`. The Blueprint sets this automatically. If you configure a Web Service manually instead of deploying the Blueprint, use the build and start commands above and set `PYTHON_VERSION=3.11.11`, `PYTHONUNBUFFERED=1`, and `RENDER=true`; Render provides `PORT`.
 
 The service exposes `/healthz` for uptime monitoring. Use that URL with UptimeRobot. On Render, other web routes are disabled so the public service only exposes the health check.
 
@@ -20,7 +20,7 @@ The vanity-role checker polls Discord's invite endpoint every five minutes, reus
 
 Server owners and members with the Administrator permission can use server moderation and configuration commands. Commands marked as bot-owner-only remain restricted to the bot owner, who retains the existing permission bypass. Role hierarchy checks still protect higher-ranked members and roles from moderation changes.
 
-Optional integrations can use `GIPHY_API_KEY`, `PEXELS_API_KEY`, `SPOTIFY_CLIENT_ID`, and `SPOTIFY_CLIENT_SECRET` as Render environment variables. Set only the keys for features you use.
+Optional integrations can use `GIPHY_API_KEY`, `PEXELS_API_KEY`, `SPOTIFY_CLIENT_ID`, and `SPOTIFY_CLIENT_SECRET` as Render environment variables. These are not required to start the bot; the related integrations need their own provider credentials to work.
 
 The bot stores command state in SQLite files under `db/`. Render's free filesystem is temporary, so that state can be lost when the service restarts or redeploys. Use a persistent disk or an external database if that state must survive.
 

